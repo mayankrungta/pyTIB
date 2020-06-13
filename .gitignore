@@ -1,3 +1,12 @@
+# Private Files
+private/
+
+# Data to be used in the code
+Data/
+
+#notebook
+#.ipynb_checkpoints
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
