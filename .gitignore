@@ -1,3 +1,6 @@
+#Virtual Environment
+venv/
+
 # Private Files
 private/
 
