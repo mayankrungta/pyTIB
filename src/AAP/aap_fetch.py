@@ -44,8 +44,9 @@ import urllib.parse as urlparse
 # For Google Cloud
 
 use_google_vision = True
-use_kannada = False
+use_kannada = True
 UPLOAD_ONLY = False
+IS_CONVERT = False
 
 from google.cloud import vision
 from google.cloud import storage
@@ -75,7 +76,7 @@ class CEOKarnataka():
         #self.url = 'http://ceo.karnataka.gov.in/draftroll_2020/'
         self.url = 'http://ceo.karnataka.gov.in/finalrolls_2020/'
         self.status_file = 'status.csv'
-        self.dir = 'BBMP' # 'BBMP_Final'
+        self.dir = 'BBMP/Kannada' # 'BBMP_Final'
         if not os.path.exists(self.dir):
             os.makedirs(self.dir)
 
@@ -88,7 +89,7 @@ class CEOKarnataka():
             self.driver = driverInitialize(timeout=3)
             #self.driver = driverInitialize(path='/opt/firefox/', timeout=3)
 
-        os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = r'./aap.bangaluru.json'
+        os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = r'../private/aap.bangaluru.json'
         self.project = 'BBMP-OCR'
         self.bucket_name = 'aap_bangaluru' # 'bbmp_bucket' # 'test_aap'
         self.storage_client = storage.Client()
@@ -619,25 +620,25 @@ class TestSuite(unittest.TestCase):
         self.logger.info("TestCase: E2E - fetch_draft_rolls()")
         # Fetch Draft Rolls from http://ceo.karnataka.gov.in/
         ck = CEOKarnataka(logger=self.logger)
-        #ck.fetch_draft_rolls(convert=True, use_google_vision=use_google_vision)
-        ck.fetch_draft_rolls(convert=True, use_google_vision=use_google_vision)
+        #ck.fetch_draft_rolls(convert=IS_CONVERT, use_google_vision=use_google_vision)
+        ck.fetch_draft_rolls(convert=IS_CONVERT, use_google_vision=use_google_vision)
         del ck
         
     def test_fetch_draft_roll(self):
         self.logger.info("TestCase: UnitTest - fetch_draft_roll(district, ac_no, part_no)")
         # Fetch Draft Rolls from http://ceo.karnataka.gov.in/
         ck = CEOKarnataka(logger=self.logger)
-        #ck.fetch_draft_roll(district='32', ac_no='151', part_no='115', convert=True, use_google_vision=use_google_vision)
-        #ck.fetch_draft_roll(district='31', ac_no='154', part_no='1', convert=True, use_google_vision=use_google_vision)
-        ck.fetch_draft_roll(district='31', ac_no='154', part_no='5', convert=True, use_google_vision=use_google_vision)
-        #ck.fetch_draft_roll(district='34', ac_no='155', part_no='232', convert=True, use_google_vision=use_google_vision)
+        #ck.fetch_draft_roll(district='32', ac_no='151', part_no='115', convert=IS_CONVERT, use_google_vision=use_google_vision)
+        #ck.fetch_draft_roll(district='31', ac_no='154', part_no='1', convert=IS_CONVERT, use_google_vision=use_google_vision)
+        ck.fetch_draft_roll(district='31', ac_no='154', part_no='5', convert=IS_CONVERT, use_google_vision=use_google_vision)
+        #ck.fetch_draft_roll(district='34', ac_no='155', part_no='232', convert=IS_CONVERT, use_google_vision=use_google_vision)
         del ck
 
     def test_parse_draft_roll(self):
         self.logger.info("TestCase: UnitTest - parse_draft_roll(district, ac_no, part_no)")
         # Parse Draft Rolls from http://ceo.karnataka.gov.in/
         ck = CEOKarnataka(logger=self.logger)
-        ck.parse_draft_roll(district='32', ac_no='151', part_no='115', convert=True, use_google_vision=use_google_vision)
+        ck.parse_draft_roll(district='32', ac_no='151', part_no='115', convert=CONVERT, use_google_vision=use_google_vision)
         #ck.parse_draft_roll(district='31', ac_no='154', part_no='7')
         del ck
 
