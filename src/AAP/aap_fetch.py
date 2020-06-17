@@ -30,7 +30,7 @@ import datetime
 from wrappers.logger import logger_fetch
 from wrappers.sn import driverInitialize, driverFinalize, displayInitialize, displayFinalize
 
-import psutil
+#import psutil
 import pandas as pd
 import json
 
@@ -47,6 +47,8 @@ use_google_vision = True
 use_kannada = True
 UPLOAD_ONLY = False
 IS_CONVERT = False
+IS_DEBUG = False
+PUSH = True
 
 from google.cloud import vision
 from google.cloud import storage
@@ -76,7 +78,10 @@ class CEOKarnataka():
         #self.url = 'http://ceo.karnataka.gov.in/draftroll_2020/'
         self.url = 'http://ceo.karnataka.gov.in/finalrolls_2020/'
         self.status_file = 'status.csv'
-        self.dir = 'BBMP/Kannada' # 'BBMP_Final'
+        if IS_DEBUG:
+            self.dir = 'BBMP/Kannada' # 'BBMP_Final'
+        else:
+            self.dir = '../Data/BBMP/Kannada' # 'BBMP_Final'
         if not os.path.exists(self.dir):
             os.makedirs(self.dir)
 
@@ -94,6 +99,18 @@ class CEOKarnataka():
         self.bucket_name = 'aap_bangaluru' # 'bbmp_bucket' # 'test_aap'
         self.storage_client = storage.Client()
         self.vision_client =  vision.ImageAnnotatorClient()
+
+        df = pd.read_csv('Ward-AC-LS-Mapping.csv')
+        #lookup_df = df[['AC#', 'LS#']].drop_duplicates('AC#', keep='last')
+        self.ac2ls = dict(zip(df['AC#'], df['LS#']))
+        self.ls_name_of = {
+            '23': 'Bangalore Rural',
+            '24': 'Bangalore North',
+            '25': 'Bangalore Central',
+            '26': 'Bangalore South',
+            '27': 'Chikkabalapura',
+        }
+        self.ac_name_of = dict(zip(df['AC#'], df['Assembly constituency']))
 
     def __del__(self):
         if self.is_selenium:
@@ -300,6 +317,21 @@ class CEOKarnataka():
             text = txt_file.read()
         return text
 
+    def push_draft_roll(self, filename, district=None, ac_no=None, part_no=None):
+        logger = self.logger
+
+        ls = ac2ls[ac_no]
+        dir_name = f'{ls} - {ls_name_of[str(ls)]}/{ac_no} - {ac_name_of[ac_no]}'
+        if not os.path.exists(dir_name):
+            logger.info(f'Creating directory[{dir_name}]')
+            os.makedirs(dir_name)
+
+        base_name = os.path.basename(filename)
+        dest_file = f'{KANNADA?"Kannada":"English"}/{dir_name}/{base_name}'
+        cmd = f'cd {self.dir}; mv -v {base_name} {dest_file}'
+        logger.info(f'Executing [{cmd}]...')
+        os.system(cmd)
+
     def fetch_draft_roll(self, district, ac_no, part_no, convert=None, use_google_vision=None, kannada=None):
         logger = self.logger
 
@@ -330,6 +362,9 @@ class CEOKarnataka():
 
         if convert:
             self.pdf2text(filename, use_google_vision=use_google_vision)
+
+        if PUSH:
+            self.push_draft_roll(filename, district, ac_no, part_no)
 
     def parse_draft_roll(self, district=None, ac_no=None, part_no=None, filename=None):
         logger = self.logger
@@ -483,8 +518,8 @@ class CEOKarnataka():
         
     def fetch_district_list(self):
         logger = self.logger
-        # return ['31', '32', '33', '34']
-        return ['31']
+        return ['31', '32', '33', '34']
+        # return ['34']
         # First four are Mysore district and rest are Kodagu
         # districts = ['217', '218', '216', '215', '210', '211', '212', ]
         # logger.info(f'Districts chosen: [{districts[:1]}]')
