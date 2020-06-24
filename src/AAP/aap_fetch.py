@@ -44,7 +44,7 @@ import urllib.parse as urlparse
 # For Google Cloud
 
 use_google_vision = True
-use_kannada = True
+KANNADA = True
 UPLOAD_ONLY = False
 IS_CONVERT = False
 IS_DEBUG = False
@@ -78,13 +78,15 @@ class CEOKarnataka():
         #self.url = 'http://ceo.karnataka.gov.in/draftroll_2020/'
         self.url = 'http://ceo.karnataka.gov.in/finalrolls_2020/'
         self.status_file = 'status.csv'
+        language = 'Kannada' if KANNADA else 'English'
         if IS_DEBUG:
-            self.dir = 'BBMP/Kannada' # 'BBMP_Final'
+            self.dir = f'BBMP/{language}'
         else:
-            self.dir = '../Data/BBMP/Kannada' # 'BBMP_Final'
+            self.dir = f'../Data/BBMP/{language}'
         if not os.path.exists(self.dir):
             os.makedirs(self.dir)
 
+        self.ignore = True
         self.is_selenium = False
         if is_selenium:
             self.is_selenium = is_selenium
@@ -111,7 +113,8 @@ class CEOKarnataka():
             '27': 'Chikkabalapura',
         }
         self.ac_name_of = dict(zip(df['AC#'], df['Assembly constituency']))
-
+        self.ac_name_of[177] = 'Anekal'
+        self.ac2ls[177] = 26
     def __del__(self):
         if self.is_selenium:
             driverFinalize(self.driver) 
@@ -317,25 +320,27 @@ class CEOKarnataka():
             text = txt_file.read()
         return text
 
-    def push_draft_roll(self, filename, district=None, ac_no=None, part_no=None):
+    def push_draft_roll(self, filename, district, ac_no, part_no):
         logger = self.logger
 
-        ls = ac2ls[ac_no]
-        dir_name = f'{ls} - {ls_name_of[str(ls)]}/{ac_no} - {ac_name_of[ac_no]}'
+        ls = self.ac2ls[ac_no]
+        dir_name = f'{self.dir}/FinalRolls/{ls} - {self.ls_name_of[str(ls)]}/{ac_no} - {self.ac_name_of[ac_no]}'
         if not os.path.exists(dir_name):
             logger.info(f'Creating directory[{dir_name}]')
             os.makedirs(dir_name)
 
-        base_name = os.path.basename(filename)
-        dest_file = f'{KANNADA?"Kannada":"English"}/{dir_name}/{base_name}'
-        cmd = f'cd {self.dir}; mv -v {base_name} {dest_file}'
+        #base_name = os.path.basename(filename)
+        lang = 'Kan' if KANNADA else 'Eng'
+        dest_file = f'{dir_name}/{lang}_L{ls}_A{ac_no}_P{part_no}{filename[-4:]}'
+        cmd = f'mv -v {filename} {dest_file}'
         logger.info(f'Executing [{cmd}]...')
-        os.system(cmd)
+        #os.system(cmd)
+        os.rename(filename, dest_file)
 
     def fetch_draft_roll(self, district, ac_no, part_no, convert=None, use_google_vision=None, kannada=None):
         logger = self.logger
 
-        if use_kannada:
+        if KANNADA:
             kannada = True
         
         filename=os.path.join(f'{self.dir}', f'{district}_{ac_no}_{part_no}.pdf')
@@ -532,6 +537,14 @@ class CEOKarnataka():
         for district in self.fetch_district_list():
             for ac_no in self.fetch_ac_list(district=district):
                 for part_no in self.fetch_part_list(district, ac_no):
+                    current = f'{district}_{ac_no}_{part_no}'
+                    logger.warning(f'Current[{current}]')
+                    '''
+                    if current == '31_168_219':
+                        self.ignore = False
+                    if self.ignore:
+                        continue
+                    '''
                     self.fetch_draft_roll(district, ac_no, part_no, convert=convert, use_google_vision=use_google_vision)
 
     def parse_draft_rolls_brute_force(self):
