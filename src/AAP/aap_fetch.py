@@ -44,11 +44,12 @@ import urllib.parse as urlparse
 # For Google Cloud
 
 use_google_vision = True
-KANNADA = True
+KANNADA = False
 UPLOAD_ONLY = False
 IS_CONVERT = False
 IS_DEBUG = False
 PUSH = True
+DEST_DIR = ''
 
 from google.cloud import vision
 from google.cloud import storage
@@ -115,6 +116,12 @@ class CEOKarnataka():
         self.ac_name_of = dict(zip(df['AC#'], df['Assembly constituency']))
         self.ac_name_of[177] = 'Anekal'
         self.ac2ls[177] = 26
+        self.ward2ac = dict(zip(df['Ward No'], df['AC#']))
+        self.ward_name_of = dict(zip(df['Ward No'], df['Ward Name']))
+        df = pd.read_csv('Booths2WardMapping.csv')
+        self.part2ward = dict(zip(df['Part'], df['Ward']))
+        self.ward_name_of[999] = 'ToBeDone'
+
     def __del__(self):
         if self.is_selenium:
             driverFinalize(self.driver) 
@@ -324,18 +331,23 @@ class CEOKarnataka():
         logger = self.logger
 
         ls = self.ac2ls[ac_no]
-        dir_name = f'{self.dir}/FinalRolls/{ls} - {self.ls_name_of[str(ls)]}/{ac_no} - {self.ac_name_of[ac_no]}'
+        part = int(f'{ac_no}{part_no:04d}')
+        ward_no = self.part2ward[part]
+        ward_name = self.ward_name_of[ward_no]
+        dir_name = f'{self.dir}/FinalRolls/{ls} - {self.ls_name_of[str(ls)]}/{ac_no} - {self.ac_name_of[ac_no]}/{ward_no} - {ward_name}'
         if not os.path.exists(dir_name):
             logger.info(f'Creating directory[{dir_name}]')
             os.makedirs(dir_name)
 
         #base_name = os.path.basename(filename)
+        filename = filename.replace('.pdf', '.txt') # Mynk TBD
         lang = 'Kan' if KANNADA else 'Eng'
         dest_file = f'{dir_name}/{lang}_L{ls}_A{ac_no}_P{part_no}{filename[-4:]}'
         cmd = f'mv -v {filename} {dest_file}'
         logger.info(f'Executing [{cmd}]...')
         #os.system(cmd)
-        os.rename(filename, dest_file)
+        # os.rename(filename, dest_file)
+        # exit(0)
 
     def fetch_draft_roll(self, district, ac_no, part_no, convert=None, use_google_vision=None, kannada=None):
         logger = self.logger
@@ -347,6 +359,7 @@ class CEOKarnataka():
         # Discard once done - FIXME
         part_id = int(part_no)
         ac_id = int(ac_no)
+        filename = filename.replace('.pdf', '.txt') # Mynk TBD
         
         if os.path.exists(filename):
             logger.info(f'File already downloaded. Converting [{filename}]...')
@@ -362,7 +375,7 @@ class CEOKarnataka():
                 url = url.replace('/English/', '/Kannada/')
             cmd = f'curl -L -o {filename} {url}'
             logger.info(f'Executing cmd[{cmd}]...')
-            os.system(cmd)
+            # os.system(cmd) Mynk TBD
             logger.info(f'Fetched the Final Roll [{filename}]')
 
         if convert:
