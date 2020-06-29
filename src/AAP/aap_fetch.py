@@ -44,7 +44,7 @@ import urllib.parse as urlparse
 # For Google Cloud
 
 use_google_vision = True
-KANNADA = False
+KANNADA = True
 UPLOAD_ONLY = False
 IS_CONVERT = False
 IS_DEBUG = False
@@ -79,7 +79,7 @@ class CEOKarnataka():
         #self.url = 'http://ceo.karnataka.gov.in/draftroll_2020/'
         self.url = 'http://ceo.karnataka.gov.in/finalrolls_2020/'
         self.status_file = 'status.csv'
-        language = 'Kannada' if KANNADA else 'English'
+        language = 'English' # 'Kannada' if KANNADA else 'English'
         if IS_DEBUG:
             self.dir = f'BBMP/{language}'
         else:
@@ -120,7 +120,7 @@ class CEOKarnataka():
         self.ward_name_of = dict(zip(df['Ward No'], df['Ward Name']))
         df = pd.read_csv('Booths2WardMapping.csv')
         self.part2ward = dict(zip(df['Part'], df['Ward']))
-        self.ward_name_of[999] = 'ToBeDone'
+        self.ward_name_of[999] = 'Extra Data'
 
     def __del__(self):
         if self.is_selenium:
@@ -334,20 +334,56 @@ class CEOKarnataka():
         part = int(f'{ac_no}{part_no:04d}')
         ward_no = self.part2ward[part]
         ward_name = self.ward_name_of[ward_no]
-        dir_name = f'{self.dir}/FinalRolls/{ls} - {self.ls_name_of[str(ls)]}/{ac_no} - {self.ac_name_of[ac_no]}/{ward_no} - {ward_name}'
+        base_dir = f'{self.dir}/TBD/FinalRolls/{ls} - {self.ls_name_of[str(ls)]}/{ac_no} - {self.ac_name_of[ac_no]} Assembly/{ward_no} - {ward_name} Ward'
+        language = 'Kannada' if KANNADA else 'English'
+        dir_name = base_dir + f'/Voter List PDF/{language}'
+        logger.info(f'Destination directory[{dir_name}]')
         if not os.path.exists(dir_name):
             logger.info(f'Creating directory[{dir_name}]')
             os.makedirs(dir_name)
+            xlsx_dir = base_dir + '/Voter List XLSX'
+            if not os.path.exists(xlsx_dir):
+                os.makedirs(xlsx_dir)
+            kypb_dir = base_dir + '/KYPB Forms'
+            if not os.path.exists(kypb_dir):
+                os.makedirs(kypb_dir)
 
-        #base_name = os.path.basename(filename)
-        filename = filename.replace('.pdf', '.txt') # Mynk TBD
+        #filename = filename.replace('.pdf', '.txt') # Mynk TBD
         lang = 'Kan' if KANNADA else 'Eng'
         dest_file = f'{dir_name}/{lang}_L{ls}_A{ac_no}_P{part_no}{filename[-4:]}'
-        cmd = f'mv -v {filename} {dest_file}'
+        '''
+        source_dir = f'{self.dir}/FinalRolls/{ls} - {self.ls_name_of[str(ls)]}/{ac_no} - {self.ac_name_of[ac_no]}'
+        base_name = os.path.basename(dest_file)
+        source_file = f'{source_dir}/{base_name}'
+        '''
+        source_file = dest_file.replace('English', 'Kannada', 1)
+        cmd = f'mv -v {source_file} {dest_file}'
         logger.info(f'Executing [{cmd}]...')
-        #os.system(cmd)
-        # os.rename(filename, dest_file)
-        # exit(0)
+        if True:
+            #os.system(cmd)
+            os.rename(source_file, dest_file)
+        else:
+            from shutil import copyfile
+            copyfile(source_file, dest_file)
+            exit(0)
+
+    def push_draft_rolls(self):
+        logger = self.logger
+
+        for district in self.fetch_district_list():
+            for ac_no in self.fetch_ac_list(district=district):
+                for part_no in self.fetch_part_list(district, ac_no):
+                    current = f'{district}_{ac_no}_{part_no}'
+                    logger.warning(f'Current[{current}]')
+                    '''
+                    if current == '31_168_219':
+                        self.ignore = False
+                    if self.ignore:
+                        continue
+                    '''
+                    # File Name is not of much consequence
+                    filename=os.path.join(f'{self.dir}', f'{district}_{ac_no}_{part_no}.pdf')
+                    self.push_draft_roll(filename, district, ac_no, part_no)
 
     def fetch_draft_roll(self, district, ac_no, part_no, convert=None, use_google_vision=None, kannada=None):
         logger = self.logger
@@ -359,7 +395,6 @@ class CEOKarnataka():
         # Discard once done - FIXME
         part_id = int(part_no)
         ac_id = int(ac_no)
-        filename = filename.replace('.pdf', '.txt') # Mynk TBD
         
         if os.path.exists(filename):
             logger.info(f'File already downloaded. Converting [{filename}]...')
@@ -695,6 +730,13 @@ class TestSuite(unittest.TestCase):
         #ck.fetch_draft_roll(district='34', ac_no='155', part_no='232', convert=IS_CONVERT, use_google_vision=use_google_vision)
         del ck
 
+    def test_push_draft_rolls(self):
+        self.logger.info("TestCase: organize files - push_draft_rolls()")
+        # Push Draft Rolls from http://ceo.karnataka.gov.in/ to google drive
+        ck = CEOKarnataka(logger=self.logger)
+        ck.push_draft_rolls()
+        del ck
+        
     def test_parse_draft_roll(self):
         self.logger.info("TestCase: UnitTest - parse_draft_roll(district, ac_no, part_no)")
         # Parse Draft Rolls from http://ceo.karnataka.gov.in/
