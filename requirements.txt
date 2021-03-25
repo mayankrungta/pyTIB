@@ -121,7 +121,7 @@ python-slugify==3.0.3
 pytoml==0.1.21
 pytz==2019.1
 PyVirtualDisplay==0.2.5
-PyYAML==5.1
+PyYAML==5.4
 pyzmq==19.0.1
 qtconsole==4.7.4
 QtPy==1.9.0
