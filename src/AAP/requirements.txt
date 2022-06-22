@@ -26,7 +26,7 @@ ipaddr==2.2.0
 lockfile==0.12.2
 lxml==4.5.1
 msgpack==0.6.2
-numpy==1.18.5
+numpy==1.22.0
 opencv-python==4.2.0.34
 packaging==20.3
 pandas==1.0.4
